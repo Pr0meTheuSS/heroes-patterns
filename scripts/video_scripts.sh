@@ -2,7 +2,7 @@
 ffmpeg -f v4l2 -video_size 1280x720 -i /dev/video0 -f alsa -i default -c:v libx264 -crf 23 -preset ultrafast -c:a aac -strict experimental output_video.mp4
 
 # Запись экрана монитора
-ffmpeg -f x11grab -video_size 1600x900 -framerate 50 -i :1.0+129,57 -vf format=yuv420p output.mp4
+ffmpeg -f x11grab -video_size 1920x1080 -framerate 50 -i :1.0+0,0 -vf format=yuv420p output.mp4
 
 # Создание эффекта картинка в картинке
 ffmpeg -i output.mp4 -i output_video.mp4 -filter_complex "[0:v][1:v]overlay=10:10[out]" -map "[out]" output_pip.mp4
