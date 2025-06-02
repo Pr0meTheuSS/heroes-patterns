@@ -1,5 +1,5 @@
 import pygame
-from components import Animation, HexPosition, Path
+from components import Animation, HexPosition, Path, Initiative, ActiveTurn
 
 def animation_system(ecs, dt):
     for entity in ecs.get_entities_with(Animation):
@@ -20,3 +20,30 @@ def movement_system(ecs, dt):
                 path.step_timer = path.step_delay
         else:
             ecs.components[Path].pop(entity)
+
+class TurnManager:
+    def __init__(self, ecs):
+        self.ecs = ecs
+        self.turn_queue = []
+
+    def start_battle(self):
+        units = self.ecs.get_entities_with(Initiative)
+        sorted_units = sorted(units, key=lambda e: -self.ecs.get(Initiative, e).value)
+        self.turn_queue = sorted_units
+
+        if self.turn_queue:
+            self.ecs.add_component(self.turn_queue[0], ActiveTurn())
+
+    def end_turn(self):
+        if not self.turn_queue:
+            return
+
+        current = self.turn_queue.pop(0)
+        if self.ecs.has(ActiveTurn, current):
+            self.ecs.components[ActiveTurn].pop(current)
+
+        self.turn_queue.append(current)
+        self.ecs.add_component(self.turn_queue[0], ActiveTurn())
+
+    def get_active_unit(self):
+        return self.turn_queue[0] if self.turn_queue else None
