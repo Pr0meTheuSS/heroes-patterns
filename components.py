@@ -41,3 +41,11 @@ class Path:
         self.current_index = 0
         self.step_delay = delay
         self.step_timer = delay
+
+@dataclass
+class Initiative:
+    value: int  # приоритет хода, выше — раньше
+
+@dataclass
+class ActiveTurn:
+    pass  # просто маркер, указывает на активного юнита

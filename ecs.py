@@ -19,3 +19,6 @@ class ECS:
             return []
         sets = [set(self.components.get(c, {})) for c in comp_types]
         return set.intersection(*sets)
+
+    def has(self, comp_type, entity):
+        return entity in self.components.get(comp_type, {})
