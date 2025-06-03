@@ -3,11 +3,18 @@ import os
 from ecs import ECS
 from components import (
     HexPosition, Hovered, Clickable, Renderable,
-    Animation, Initiative, ActiveTurn, Path
+    Animation, Initiative, ActiveTurn, Path, BlockingMove
 )
 from hexmath import hex_to_pixel, pixel_to_hex, draw_hex
 from systems import animation_system, TurnManager, movement_system
-from pathfinding import bfs
+from pathfinding import bfs_with_fallback
+
+def is_passable(q, r):
+    for entity in ecs.get_entities_with(HexPosition, BlockingMove):
+        pos = ecs.get(HexPosition, entity)
+        if pos.q == q and pos.r == r:
+            return False
+    return True
 
 # --- Цветовые константы ---
 COLOR_BACKGROUND = (30, 30, 30)
@@ -49,16 +56,19 @@ knight = ecs.create_entity()
 ecs.add_component(knight, Animation(frames, frame_duration=0.15))
 ecs.add_component(knight, HexPosition(0, 0))
 ecs.add_component(knight, Initiative(5))
+ecs.add_component(knight, BlockingMove())
 
 knight1 = ecs.create_entity()
 ecs.add_component(knight1, Animation(frames, frame_duration=0.15))
 ecs.add_component(knight1, HexPosition(-3, 0))
 ecs.add_component(knight1, Initiative(5))
+ecs.add_component(knight1, BlockingMove())
 
 knight2 = ecs.create_entity()
 ecs.add_component(knight2, Animation(frames, frame_duration=0.15))
 ecs.add_component(knight2, HexPosition(3, 0))
 ecs.add_component(knight2, Initiative(3))
+ecs.add_component(knight2, BlockingMove())
 
 turn_manager.start_battle()
 
@@ -100,7 +110,7 @@ while running:
     if active and ecs.get(Path, active) is None and ecs.get(HexPosition, active):
         start_pos = ecs.get(HexPosition, active)
         initiative = ecs.get(Initiative, active)
-        hovered_path = bfs((start_pos.q, start_pos.r), (q, r), lambda q, r: True)[:(initiative.value-1)]
+        hovered_path = bfs_with_fallback((start_pos.q, start_pos.r), (q, r), is_passable)[:(initiative.value-1)]
 
     # Отрисовка сетки
     for entity in ecs.get_entities_with(HexPosition, Renderable):
@@ -140,7 +150,7 @@ while running:
             if active and ecs.get(Path, active) is None:
                 start = ecs.get(HexPosition, active)
                 initiative = ecs.get(Initiative, active)
-                path = bfs((start.q, start.r), (q, r), lambda q, r: True)[:(initiative.value-1)]
+                path = bfs_with_fallback((start.q, start.r), (q, r), is_passable)[:(initiative.value-1)]
                 if path:
                     ecs.add_component(active, Path(path[1:]))
 
