@@ -3,7 +3,8 @@ import os
 from ecs import ECS
 from components import (
     HexPosition, Hovered, Clickable, Renderable,
-    Animation, Initiative, ActiveTurn, Path, BlockingMove
+    Animation, Initiative, ActiveTurn, Path, BlockingMove,
+    Health
 )
 from hexmath import hex_to_pixel, pixel_to_hex, draw_hex
 from systems import animation_system, TurnManager, movement_system
@@ -15,6 +16,30 @@ def is_passable(q, r):
         if pos.q == q and pos.r == r:
             return False
     return True
+
+def draw_health_bar(surface, x, y, current, max_value, width=60, height=8):
+    # Цвета
+    bg_color = (50, 50, 50)
+    fg_color = (0, 200, 0)
+    border_color = (255, 255, 255)
+    text_color = (255, 255, 255)
+
+    # Пропорция здоровья
+    ratio = max(0, min(1, current / max_value))
+    fg_width = int(width * ratio)
+
+    # Фон полосы
+    pygame.draw.rect(surface, bg_color, (x, y, width, height))
+    # Зелёная заполненная часть
+    pygame.draw.rect(surface, fg_color, (x, y, fg_width, height))
+    # Рамка
+    pygame.draw.rect(surface, border_color, (x, y, width, height), 1)
+
+    # Текст
+    font = pygame.font.SysFont(None, 16)
+    text = font.render(f"{current}/{max_value}", True, text_color)
+    text_rect = text.get_rect(center=(x + width // 2, y + height + 8))
+    surface.blit(text, text_rect)
 
 # --- Цветовые константы ---
 COLOR_BACKGROUND = (30, 30, 30)
@@ -31,7 +56,15 @@ def render_entity(screen, entity, ecs):
         pos = ecs.get(HexPosition, entity)
         frame = anim.frames[anim.current_frame]
         x, y = hex_to_pixel(pos.q, pos.r, TILE_SIZE)
+        # TODO: remove absolut offset like '+ 400' and '+ 300'
         screen.blit(frame, (x + 400 - frame.get_width() // 2, y + 300 - frame.get_height()))
+    health = ecs.get(Health, entity)
+    if health:
+        pos = ecs.get(HexPosition, entity)
+        px, py = hex_to_pixel(pos.q, pos.r, TILE_SIZE)
+        draw_health_bar(screen, px + 370, py + 250, health.value, health.max_value)
+        
+        
 
 def load_animation_frames(folder_path):
     return [
@@ -57,18 +90,21 @@ ecs.add_component(knight, Animation(frames, frame_duration=0.15))
 ecs.add_component(knight, HexPosition(0, 0))
 ecs.add_component(knight, Initiative(5))
 ecs.add_component(knight, BlockingMove())
+ecs.add_component(knight, Health(100, 80))
 
 knight1 = ecs.create_entity()
 ecs.add_component(knight1, Animation(frames, frame_duration=0.15))
 ecs.add_component(knight1, HexPosition(-3, 0))
 ecs.add_component(knight1, Initiative(5))
 ecs.add_component(knight1, BlockingMove())
+ecs.add_component(knight1, Health(100, 1))
 
 knight2 = ecs.create_entity()
 ecs.add_component(knight2, Animation(frames, frame_duration=0.15))
 ecs.add_component(knight2, HexPosition(3, 0))
 ecs.add_component(knight2, Initiative(3))
 ecs.add_component(knight2, BlockingMove())
+ecs.add_component(knight2, Health(100, 50))
 
 turn_manager.start_battle()
 
