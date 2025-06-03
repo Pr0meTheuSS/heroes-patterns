@@ -44,8 +44,12 @@ class Path:
 
 @dataclass
 class Initiative:
-    value: int  # приоритет хода, выше — раньше
+    value: int
 
 @dataclass
 class ActiveTurn:
-    pass  # просто маркер, указывает на активного юнита
+    pass
+
+@dataclass
+class BlockingMove:
+    pass
