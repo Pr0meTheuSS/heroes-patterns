@@ -4,7 +4,7 @@ from ecs import ECS
 from components import (
     HexPosition, Hovered, Clickable, Renderable,
     Animation, Initiative, ActiveTurn, Path, BlockingMove,
-    Health
+    Health, Team
 )
 from hexmath import hex_to_pixel, pixel_to_hex, draw_hex
 from systems import animation_system, TurnManager, movement_system
@@ -56,8 +56,23 @@ def render_entity(screen, entity, ecs):
         pos = ecs.get(HexPosition, entity)
         frame = anim.frames[anim.current_frame]
         x, y = hex_to_pixel(pos.q, pos.r, TILE_SIZE)
+        screen_x = x + 400
+        screen_y = y + 300
+        team = ecs.get(Team, entity)
+
+        if team and team.name == "player":
+            base_color = (0, 200, 255)
+        elif team and team.name == "computer":
+            base_color = (255, 50, 50)
+        else:
+            base_color = (255, 255, 255)
+        # Цветной круг под ногами юнита
+        pygame.draw.circle(screen, base_color, (screen_x, screen_y), TILE_SIZE * 0.75)
+
+        # Юнит
         # TODO: remove absolut offset like '+ 400' and '+ 300'
         screen.blit(frame, (x + 400 - frame.get_width() // 2, y + 300 - frame.get_height()))
+
     health = ecs.get(Health, entity)
     if health:
         pos = ecs.get(HexPosition, entity)
@@ -91,6 +106,7 @@ ecs.add_component(knight, HexPosition(0, 0))
 ecs.add_component(knight, Initiative(5))
 ecs.add_component(knight, BlockingMove())
 ecs.add_component(knight, Health(100, 80))
+ecs.add_component(knight, Team("player"))
 
 knight1 = ecs.create_entity()
 ecs.add_component(knight1, Animation(frames, frame_duration=0.15))
@@ -98,6 +114,7 @@ ecs.add_component(knight1, HexPosition(-3, 0))
 ecs.add_component(knight1, Initiative(5))
 ecs.add_component(knight1, BlockingMove())
 ecs.add_component(knight1, Health(100, 1))
+ecs.add_component(knight1, Team("computer"))
 
 knight2 = ecs.create_entity()
 ecs.add_component(knight2, Animation(frames, frame_duration=0.15))
@@ -105,6 +122,7 @@ ecs.add_component(knight2, HexPosition(3, 0))
 ecs.add_component(knight2, Initiative(3))
 ecs.add_component(knight2, BlockingMove())
 ecs.add_component(knight2, Health(100, 50))
+ecs.add_component(knight2, Team("computer"))
 
 turn_manager.start_battle()
 
