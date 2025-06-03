@@ -48,7 +48,7 @@ frames = load_animation_frames("assets/knight")
 knight = ecs.create_entity()
 ecs.add_component(knight, Animation(frames, frame_duration=0.15))
 ecs.add_component(knight, HexPosition(0, 0))
-ecs.add_component(knight, Initiative(15))
+ecs.add_component(knight, Initiative(5))
 
 knight1 = ecs.create_entity()
 ecs.add_component(knight1, Animation(frames, frame_duration=0.15))
@@ -58,7 +58,7 @@ ecs.add_component(knight1, Initiative(5))
 knight2 = ecs.create_entity()
 ecs.add_component(knight2, Animation(frames, frame_duration=0.15))
 ecs.add_component(knight2, HexPosition(3, 0))
-ecs.add_component(knight2, Initiative(1))
+ecs.add_component(knight2, Initiative(3))
 
 turn_manager.start_battle()
 
@@ -99,7 +99,8 @@ while running:
     hovered_path = []
     if active and ecs.get(Path, active) is None and ecs.get(HexPosition, active):
         start_pos = ecs.get(HexPosition, active)
-        hovered_path = bfs((start_pos.q, start_pos.r), (q, r), lambda q, r: True)
+        initiative = ecs.get(Initiative, active)
+        hovered_path = bfs((start_pos.q, start_pos.r), (q, r), lambda q, r: True)[:(initiative.value-1)]
 
     # Отрисовка сетки
     for entity in ecs.get_entities_with(HexPosition, Renderable):
@@ -131,7 +132,6 @@ while running:
         if path and path.current_index >= len(path.steps):
             ecs.components[Path].pop(active, None)
             turn_manager.end_turn()
-            print("End turn")
     # Обработка событий
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -139,7 +139,8 @@ while running:
         elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             if active and ecs.get(Path, active) is None:
                 start = ecs.get(HexPosition, active)
-                path = bfs((start.q, start.r), (q, r), lambda q, r: True)
+                initiative = ecs.get(Initiative, active)
+                path = bfs((start.q, start.r), (q, r), lambda q, r: True)[:(initiative.value-1)]
                 if path:
                     ecs.add_component(active, Path(path[1:]))
 
