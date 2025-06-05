@@ -4,10 +4,11 @@ from ecs import ECS
 from components import (
     HexPosition, Hovered, Clickable, Renderable,
     Animation, Initiative, ActiveTurn, Path, BlockingMove,
-    Health, Team
+    Health, Team, Attack, AttackCommand
 )
+
 from hexmath import hex_to_pixel, pixel_to_hex, draw_hex
-from systems import animation_system, TurnManager, movement_system
+from systems import animation_system, TurnManager, movement_system, attack_system, command_system
 from pathfinding import bfs_with_fallback
 
 def is_passable(q, r):
@@ -16,6 +17,7 @@ def is_passable(q, r):
         if pos.q == q and pos.r == r:
             return False
     return True
+
 
 def draw_health_bar(surface, x, y, current, max_value, width=60, height=8):
     # Цвета
@@ -69,7 +71,6 @@ def render_entity(screen, entity, ecs):
         # Цветной круг под ногами юнита
         pygame.draw.circle(screen, base_color, (screen_x, screen_y), TILE_SIZE * 0.75)
 
-        # Юнит
         # TODO: remove absolut offset like '+ 400' and '+ 300'
         screen.blit(frame, (x + 400 - frame.get_width() // 2, y + 300 - frame.get_height()))
 
@@ -107,10 +108,11 @@ ecs.add_component(knight, Initiative(5))
 ecs.add_component(knight, BlockingMove())
 ecs.add_component(knight, Health(100, 80))
 ecs.add_component(knight, Team("player"))
+ecs.add_component(knight, Attack(20))
 
 knight1 = ecs.create_entity()
 ecs.add_component(knight1, Animation(frames, frame_duration=0.15))
-ecs.add_component(knight1, HexPosition(-3, 0))
+ecs.add_component(knight1, HexPosition(-5, 0))
 ecs.add_component(knight1, Initiative(5))
 ecs.add_component(knight1, BlockingMove())
 ecs.add_component(knight1, Health(100, 1))
@@ -140,7 +142,7 @@ running = True
 while running:
     dt = clock.tick(60) / 1000.0
     animation_system(ecs, dt)
-    movement_system(ecs, dt)
+
     screen.fill(COLOR_BACKGROUND)
 
     mouse_x, mouse_y = pygame.mouse.get_pos()
@@ -190,6 +192,7 @@ while running:
     for entity in ecs.get_entities_with(Animation, HexPosition):
         render_entity(screen, entity, ecs)
 
+
     # Проверка конца хода — если путь есть и завершён
     if active:
         path = ecs.get(Path, active)
@@ -201,12 +204,24 @@ while running:
         if event.type == pygame.QUIT:
             running = False
         elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            # Упрощённая логика
+            for entity in ecs.get_entities_with(HexPosition, Team):
+                pos = ecs.get(HexPosition, entity)
+                team = ecs.get(Team, entity)        
+                if pos.q == q and pos.r == r and team.name != ecs.get(Team, active).name:
+                    print("Attack")
+                    ecs.add_component(active, AttackCommand(target_id=entity))
+
             if active and ecs.get(Path, active) is None:
                 start = ecs.get(HexPosition, active)
                 initiative = ecs.get(Initiative, active)
                 path = bfs_with_fallback((start.q, start.r), (q, r), is_passable)[:(initiative.value-1)]
                 if path:
                     ecs.add_component(active, Path(path[1:]))
+
+    command_system(ecs, is_passable)
+    movement_system(ecs, dt)
+    attack_system(ecs)
 
     pygame.display.flip()
 

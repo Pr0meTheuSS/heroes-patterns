@@ -11,6 +11,16 @@ class ECS:
     def add_component(self, entity, component):
         self.components.setdefault(type(component), {})[entity] = component
 
+    def remove_component(self, entity, comp_type):
+        """Удаляет компонент указанного типа у сущности."""
+        if comp_type in self.components and entity in self.components[comp_type]:
+            del self.components[comp_type][entity]
+
+    def delete_entity(self, entity):
+        """Удаляет все компоненты сущности, по сути удаляя саму сущность."""
+        for comp_dict in self.components.values():
+            comp_dict.pop(entity, None) 
+   
     def get(self, comp_type, entity):
         return self.components.get(comp_type, {}).get(entity)
 

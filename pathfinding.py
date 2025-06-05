@@ -1,5 +1,13 @@
 from collections import deque
 
+def hex_distance(a, b):
+    """
+    Возвращает расстояние между двумя точками в axial-координатах (q, r)
+    """
+    aq, ar = a
+    bq, br = b
+    return (abs(aq - bq) + abs(aq + ar - bq - br) + abs(ar - br)) // 2
+
 def get_neighbors(q, r):
     directions = [
         (+1, 0), (+1, -1), (0, -1),
