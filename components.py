@@ -64,3 +64,30 @@ class Health:
 class Team:
     def __init__(self, name):
         self.name = name
+
+# components.py (добавь или проверь наличие)
+from dataclasses import dataclass
+
+@dataclass
+class MoveCommand:
+    path: list  # список клеток [(q, r), ...]
+
+@dataclass
+class AttackCommand:
+    target_id: int  # цель для атаки
+
+@dataclass
+class QueuedAttack:
+    target_id: int  # цель для отложенной атаки
+
+@dataclass
+class Attack:
+    power: int
+    range: int = 1  # дальность атаки (0 — только соседние клетки)
+
+@dataclass
+class Path:
+    steps: list
+    current_index: int = 0
+    step_timer: float = 0.0
+    step_delay: float = 0.2
