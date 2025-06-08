@@ -91,3 +91,11 @@ class Path:
     current_index: int = 0
     step_timer: float = 0.0
     step_delay: float = 0.2
+    
+class GameOver:
+    def __init__(self):
+        self.message_shown = False
+
+class EndgameUI:
+    def __init__(self, window):
+        self.window = window

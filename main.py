@@ -1,14 +1,17 @@
-import pygame
+import pygame, pygame_gui
 import os
 from ecs import ECS
 from components import (
     HexPosition, Hovered, Clickable, Renderable,
     Animation, Initiative, ActiveTurn, Path, BlockingMove,
-    Health, Team, Attack, AttackCommand
+    Health, Team, Attack, AttackCommand, GameOver
 )
 
 from hexmath import hex_to_pixel, pixel_to_hex, draw_hex
-from systems import animation_system, TurnManager, movement_system, attack_system, command_system
+from systems import (
+    animation_system, TurnManager, movement_system, 
+    attack_system, command_system, endgame_system
+) 
 from pathfinding import bfs_with_fallback
 
 def is_passable(q, r):
@@ -98,6 +101,9 @@ TILE_SIZE = 30
 GRID_RADIUS = 5
 turn_manager = TurnManager(ecs)
 
+ui_manager = pygame_gui.UIManager((800, 600))
+endgame_window = None  # Появится после победы/поражения
+
 frames = load_animation_frames("assets/knight")
 
 # --- Юниты ---
@@ -148,6 +154,27 @@ while running:
     mouse_x, mouse_y = pygame.mouse.get_pos()
     q, r = pixel_to_hex(mouse_x - 400, mouse_y - 300, TILE_SIZE)
 
+    # if endgame_window is None:
+    #     teams_alive = set()
+    #     for ent in ecs.get_entities_with(Health, Team):
+    #         hp = ecs.get(Health, ent).value
+    #         if hp > 0:
+    #             teams_alive.add(ecs.get(Team, ent).name)
+
+    #     if len(teams_alive) <= 1:
+    #         winner = teams_alive.pop() if teams_alive else None
+    #         if winner == "player":
+    #             msg = "<b>Победа!</b><br>Вы победили всех врагов."
+    #         else:
+    #             msg = "<b>Поражение</b><br>Все ваши юниты уничтожены."
+
+    #         endgame_window = pygame_gui.windows.UIMessageWindow(
+    #             rect=pygame.Rect(200, 150, 400, 200),
+    #             html_message=msg,
+    #             manager=ui_manager,
+    #             window_title="Игра окончена"
+    #         )
+
     # Обновляем hovered
     for entity in ecs.get_entities_with(Hovered):
         ecs.components[Hovered].pop(entity)
@@ -192,17 +219,27 @@ while running:
     for entity in ecs.get_entities_with(Animation, HexPosition):
         render_entity(screen, entity, ecs)
 
-
     # Проверка конца хода — если путь есть и завершён
     if active:
         path = ecs.get(Path, active)
         if path and path.current_index >= len(path.steps):
             ecs.components[Path].pop(active, None)
             turn_manager.end_turn()
+
     # Обработка событий
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
+
+        ui_manager.process_events(event)
+
+        # Проверка на закрытие окна
+        if event.type == pygame_gui.UI_WINDOW_CLOSE:
+            for ent in ecs.get_entities_with(EndgameUI):
+                ui = ecs.get(EndgameUI, ent)
+                if event.ui_element == ui.window:
+                    running = False  # завершение игры
+
         elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             # Упрощённая логика
             for entity in ecs.get_entities_with(HexPosition, Team):
@@ -222,6 +259,10 @@ while running:
     command_system(ecs, is_passable)
     movement_system(ecs, dt)
     attack_system(ecs)
+    ui_manager.update(dt)
+    ui_manager.draw_ui(screen)
+    # pygame.display.update()
+    endgame_system(ecs, ui_manager)
 
     pygame.display.flip()
 
