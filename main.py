@@ -4,6 +4,7 @@ import os
 
 import colors
 
+from components.game_over import GameOver
 from ecs import ECS
 from components import (
     HexPosition,
@@ -45,6 +46,10 @@ SCREEN_OFFSET_X = 0
 SCREEN_OFFSET_Y = 0
 
 # --- Вспомогательные функции ---
+
+
+def is_game_over(ecs) -> bool:
+    return len(ecs.get_entities_with(GameOver)) != 0
 
 
 def compute_screen_offset():
@@ -161,7 +166,7 @@ def draw_grid(screen, ecs):
         ren = ecs.get(Renderable, entity)
         x, y = hex_to_pixel(pos.q, pos.r, TILE_SIZE)
         color = ren.color
-        if ecs.get(Hovered, entity):
+        if ecs.get(Hovered, entity) and not is_game_over(ecs):
             color = colors.COLOR_GRID_HOVERED
         if ecs.get(ActiveTurn, entity):
             color = colors.COLOR_GRID_ACTIVE_UNIT
@@ -203,26 +208,29 @@ def handle_events(events, ecs, turn_manager, ui_manager, q, r):
                 if event.ui_element == ui.window:
                     running = False
 
-        elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-            for entity in ecs.get_entities_with(HexPosition, Team):
-                pos = ecs.get(HexPosition, entity)
-                team = ecs.get(Team, entity)
-                if (
-                    pos.q == q
-                    and pos.r == r
-                    and active
-                    and team.name != ecs.get(Team, active).name
-                ):
-                    ecs.add_component(active, AttackCommand(target_id=entity))
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            if not is_game_over(ecs):
+                for entity in ecs.get_entities_with(HexPosition, Team):
+                    pos = ecs.get(HexPosition, entity)
+                    team = ecs.get(Team, entity)
+                    if (
+                        pos.q == q
+                        and pos.r == r
+                        and active
+                        and team.name != ecs.get(Team, active).name
+                    ):
+                        ecs.add_component(active, AttackCommand(target_id=entity))
 
-            if active and ecs.get(Path, active) is None:
-                start = ecs.get(HexPosition, active)
-                initiative = ecs.get(Initiative, active)
-                path = bfs_with_fallback(
-                    (start.q, start.r), (q, r), lambda q_, r_: is_passable(q_, r_, ecs)
-                )[: initiative.value - 1]
-                if path:
-                    ecs.add_component(active, Path(path[1:]))
+                if active and ecs.get(Path, active) is None:
+                    start = ecs.get(HexPosition, active)
+                    initiative = ecs.get(Initiative, active)
+                    path = bfs_with_fallback(
+                        (start.q, start.r),
+                        (q, r),
+                        lambda q_, r_: is_passable(q_, r_, ecs),
+                    )[: initiative.value - 1]
+                    if path:
+                        ecs.add_component(active, Path(path[1:]))
 
     return running
 
@@ -268,7 +276,12 @@ def game_loop():
         active = turn_manager.get_active_unit()
 
         hovered_path = []
-        if active and ecs.get(Path, active) is None and ecs.get(HexPosition, active):
+        if (
+            active
+            and ecs.get(Path, active) is None
+            and ecs.get(HexPosition, active)
+            and not is_game_over(ecs)
+        ):
             start_pos = ecs.get(HexPosition, active)
             initiative = ecs.get(Initiative, active)
             hovered_path = bfs_with_fallback(
