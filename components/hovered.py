@@ -1,0 +1,3 @@
+class Hovered:
+    pass
+
