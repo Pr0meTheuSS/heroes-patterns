@@ -20,6 +20,7 @@ from components import (
     Team,
     Attack,
     EndgameUI,
+    AvailableCell,
 )
 
 from commands import AttackCommand
@@ -32,6 +33,7 @@ from systems import (
     attack_system,
     command_system,
     endgame_system,
+    turn_manager,
 )
 from pathfinding import bfs_with_fallback
 
@@ -137,7 +139,7 @@ def setup_entities(ecs):
     knight = ecs.create_entity()
     ecs.add_component(knight, Animation(frames, frame_duration=0.15))
     ecs.add_component(knight, HexPosition(0, 0))
-    ecs.add_component(knight, Initiative(5))
+    ecs.add_component(knight, Initiative(3))
     ecs.add_component(knight, BlockingMove())
     ecs.add_component(knight, Health(100, 80))
     ecs.add_component(knight, Team("player"))
@@ -146,7 +148,7 @@ def setup_entities(ecs):
     knight1 = ecs.create_entity()
     ecs.add_component(knight1, Animation(frames, frame_duration=0.15))
     ecs.add_component(knight1, HexPosition(8, 0))
-    ecs.add_component(knight1, Initiative(5))
+    ecs.add_component(knight1, Initiative(3))
     ecs.add_component(knight1, BlockingMove())
     ecs.add_component(knight1, Health(100, 1))
     ecs.add_component(knight1, Team("computer"))
@@ -160,6 +162,39 @@ def setup_entities(ecs):
             ecs.add_component(entity, Clickable())
 
 
+from collections import deque
+
+
+def get_reachable_cells(start_q, start_r, is_passable, max_depth, ecs):
+    visited = set()
+    frontier = deque()
+    frontier.append((start_q, start_r, 0))  # (q, r, depth)
+    reachable = []
+
+    while frontier:
+        q, r, depth = frontier.popleft()
+        if (q, r) in visited or depth > max_depth:
+            continue
+
+        visited.add((q, r))
+        reachable.append((q, r))
+
+        if depth < max_depth:
+            for dq, dr in [  # 6 соседей гекса
+                (+1, 0),
+                (+1, -1),
+                (0, -1),
+                (-1, 0),
+                (-1, +1),
+                (0, +1),
+            ]:
+                nq, nr = q + dq, r + dr
+                if is_passable(nq, nr, ecs):
+                    frontier.append((nq, nr, depth + 1))
+
+    return [HexPosition(q, r) for q, r in reachable]
+
+
 def draw_grid(screen, ecs):
     for entity in ecs.get_entities_with(HexPosition, Renderable):
         pos = ecs.get(HexPosition, entity)
@@ -168,6 +203,8 @@ def draw_grid(screen, ecs):
         color = ren.color
         if ecs.get(Hovered, entity) and not is_game_over(ecs):
             color = colors.COLOR_GRID_HOVERED
+        if ecs.get(AvailableCell, entity):
+            color = colors.COLOR_AVAILABLE_CELL
         if ecs.get(ActiveTurn, entity):
             color = colors.COLOR_GRID_ACTIVE_UNIT
         draw_hex(
@@ -180,6 +217,30 @@ def draw_grid(screen, ecs):
             TILE_SIZE,
             2,
         )
+
+
+def update_available_cells(ecs, turn_manager):
+    for available in ecs.get_entities_with(AvailableCell):
+        ecs.remove_component(available, AvailableCell)
+    active = turn_manager.get_active_unit()
+    if active is None:
+        return
+    if ecs.get(Path, active) is not None:
+        return
+    if ecs.get(Team, active).name != "player":
+        return
+    position = ecs.get(HexPosition, active)
+    if position is None:
+        return
+
+    bfs_deep = ecs.get(Initiative, active).value
+    available_cells = get_reachable_cells(
+        position.q, position.r, is_passable, bfs_deep, ecs
+    )
+    for cell in ecs.get_entities_with(HexPosition, Clickable):
+        cell_position = ecs.get(HexPosition, cell)
+        if cell_position in available_cells:
+            ecs.add_component(cell, AvailableCell())
 
 
 def update_hovered_tile(ecs, q, r):
@@ -209,28 +270,29 @@ def handle_events(events, ecs, turn_manager, ui_manager, q, r):
                     running = False
 
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-            if not is_game_over(ecs):
-                for entity in ecs.get_entities_with(HexPosition, Team):
-                    pos = ecs.get(HexPosition, entity)
-                    team = ecs.get(Team, entity)
-                    if (
-                        pos.q == q
-                        and pos.r == r
-                        and active
-                        and team.name != ecs.get(Team, active).name
-                    ):
-                        ecs.add_component(active, AttackCommand(target_id=entity))
+            if is_game_over(ecs):
+                continue
+            for entity in ecs.get_entities_with(HexPosition, Team):
+                pos = ecs.get(HexPosition, entity)
+                team = ecs.get(Team, entity)
+                if (
+                    pos.q == q
+                    and pos.r == r
+                    and active
+                    and team.name != ecs.get(Team, active).name
+                ):
+                    ecs.add_component(active, AttackCommand(target_id=entity))
 
-                if active and ecs.get(Path, active) is None:
-                    start = ecs.get(HexPosition, active)
-                    initiative = ecs.get(Initiative, active)
-                    path = bfs_with_fallback(
-                        (start.q, start.r),
-                        (q, r),
-                        lambda q_, r_: is_passable(q_, r_, ecs),
-                    )[: initiative.value - 1]
-                    if path:
-                        ecs.add_component(active, Path(path[1:]))
+            if active and ecs.get(Path, active) is None:
+                start = ecs.get(HexPosition, active)
+                initiative = ecs.get(Initiative, active)
+                path = bfs_with_fallback(
+                    (start.q, start.r),
+                    (q, r),
+                    lambda q_, r_: is_passable(q_, r_, ecs),
+                )[: initiative.value + 1]
+                if path:
+                    ecs.add_component(active, Path(path[1:]))
 
     return running
 
@@ -288,7 +350,7 @@ def game_loop():
                 (start_pos.q, start_pos.r),
                 (q, r),
                 lambda q_, r_: is_passable(q_, r_, ecs),
-            )[: initiative.value - 1]
+            )[: initiative.value + 1]
 
         draw_grid(screen, ecs)
 
@@ -318,7 +380,7 @@ def game_loop():
         attack_system(ecs)
         ui_manager.update(dt)
         ui_manager.draw_ui(screen)
-
+        update_available_cells(ecs, turn_manager)
         endgame_system(ecs, ui_manager)
 
         pygame.display.flip()

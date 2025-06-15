@@ -14,9 +14,22 @@ from .team import Team
 from .attack import Attack
 from .game_over import GameOver
 from .endgame_ui import EndgameUI
+from .available_cell import AvailableCell
 
 __all__ = [
-    "HexPosition", "Hovered", "Clickable", "Renderable",
-    "Animation", "Initiative", "ActiveTurn", "Path", "BlockingMove",
-    "Health", "Team", "Attack", "GameOver", "EndgameUI"
+    "HexPosition",
+    "Hovered",
+    "Clickable",
+    "Renderable",
+    "Animation",
+    "Initiative",
+    "ActiveTurn",
+    "Path",
+    "BlockingMove",
+    "Health",
+    "Team",
+    "Attack",
+    "GameOver",
+    "EndgameUI",
+    "AvailableCell",
 ]
