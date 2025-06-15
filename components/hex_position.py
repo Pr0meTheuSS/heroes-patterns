@@ -3,3 +3,5 @@ class HexPosition:
         self.q = q
         self.r = r
 
+    def __eq__(self, other):
+        return self.q == other.q and self.r == other.r
