@@ -33,8 +33,8 @@ from systems import (
     attack_system,
     command_system,
     endgame_system,
-    turn_manager,
 )
+
 from pathfinding import bfs_with_fallback
 
 # --- Константы ---
@@ -263,6 +263,10 @@ def handle_events(events, ecs, turn_manager, ui_manager, q, r):
             running = False
         ui_manager.process_events(event)
 
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_SPACE:
+                turn_manager.end_turn()
+
         if event.type == pygame_gui.UI_WINDOW_CLOSE:
             for ent in ecs.get_entities_with(EndgameUI):
                 ui = ecs.get(EndgameUI, ent)
@@ -312,7 +316,6 @@ def game_loop():
     screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
     clock = pygame.time.Clock()
     ui_manager = pygame_gui.UIManager((SCREEN_WIDTH, SCREEN_HEIGHT))
-
     SCREEN_OFFSET_X, SCREEN_OFFSET_Y = compute_screen_offset()
 
     ecs = ECS()
