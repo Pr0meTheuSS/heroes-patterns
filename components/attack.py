@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 
+
 @dataclass
 class Attack:
     power: int

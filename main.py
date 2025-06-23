@@ -3,6 +3,7 @@ import pygame_gui
 import os
 
 import colors
+from collections import deque
 
 from components.game_over import GameOver
 from ecs import ECS
@@ -21,6 +22,7 @@ from components import (
     Attack,
     EndgameUI,
     AvailableCell,
+    AiManagable,
 )
 
 from commands import AttackCommand
@@ -33,9 +35,11 @@ from systems import (
     attack_system,
     command_system,
     endgame_system,
+    ai_managment,
 )
 
 from pathfinding import bfs_with_fallback
+from pathfinding import is_passable
 
 # --- Константы ---
 TILE_SIZE = 30
@@ -61,14 +65,6 @@ def compute_screen_offset():
     offset_x = (SCREEN_WIDTH - grid_pixel_width) // 2
     offset_y = (SCREEN_HEIGHT - grid_pixel_height) // 2
     return int(offset_x), int(offset_y)
-
-
-def is_passable(q, r, ecs):
-    for entity in ecs.get_entities_with(HexPosition, BlockingMove):
-        pos = ecs.get(HexPosition, entity)
-        if pos.q == q and pos.r == r:
-            return False
-    return True
 
 
 def draw_health_bar(surface, x, y, current, max_value, width=60, height=8):
@@ -152,6 +148,7 @@ def setup_entities(ecs):
     ecs.add_component(knight1, BlockingMove())
     ecs.add_component(knight1, Health(100, 1))
     ecs.add_component(knight1, Team("computer"))
+    ecs.add_component(knight1, AiManagable())
 
     for r in range(MAP_HEIGHT):
         r_offset = r >> 1
@@ -160,9 +157,6 @@ def setup_entities(ecs):
             ecs.add_component(entity, HexPosition(q, r))
             ecs.add_component(entity, Renderable(colors.COLOR_GRID_DEFAULT))
             ecs.add_component(entity, Clickable())
-
-
-from collections import deque
 
 
 def get_reachable_cells(start_q, start_r, is_passable, max_depth, ecs):
@@ -259,6 +253,8 @@ def handle_events(events, ecs, turn_manager, ui_manager, q, r):
     active = turn_manager.get_active_unit()
 
     for event in events:
+        if ecs.get(Team, active).name != "player":
+            break
         if event.type == pygame.QUIT:
             running = False
         ui_manager.process_events(event)
@@ -285,6 +281,7 @@ def handle_events(events, ecs, turn_manager, ui_manager, q, r):
                     and active
                     and team.name != ecs.get(Team, active).name
                 ):
+                    print(entity)
                     ecs.add_component(active, AttackCommand(target_id=entity))
 
             if active and ecs.get(Path, active) is None:
@@ -369,10 +366,15 @@ def game_loop():
 
         render_units(screen, ecs)
 
-        if active:
+        if active and ecs.get(Team, active).name == "player":
             path = ecs.get(Path, active)
-            if path and path.current_index >= len(path.steps):
+            if (
+                path
+                and path.current_index >= len(path.steps)
+                and not ecs.get(AttackCommand, active)
+            ):
                 ecs.components[Path].pop(active, None)
+                print("end turn")
                 turn_manager.end_turn()
 
         events = pygame.event.get()
@@ -380,9 +382,12 @@ def game_loop():
 
         command_system.command_system(ecs, lambda q_, r_: is_passable(q_, r_, ecs))
         movement_system.movement_system(ecs, dt)
+        ai_managment(ecs, turn_manager)
         attack_system(ecs)
+
         ui_manager.update(dt)
         ui_manager.draw_ui(screen)
+
         update_available_cells(ecs, turn_manager)
         endgame_system(ecs, ui_manager)
 
