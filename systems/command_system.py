@@ -1,8 +1,8 @@
-
 from pathfinding import bfs_with_fallback, hex_distance
 
 from commands import AttackCommand, QueuedAttack
-from components import HexPosition, Attack, Initiative, Path 
+from components import HexPosition, Attack, Initiative, Path
+
 
 def command_system(ecs, is_passable):
     for entity in ecs.get_entities_with(AttackCommand):
@@ -19,13 +19,21 @@ def command_system(ecs, is_passable):
         atk = ecs.get(Attack, entity)
         initiative = ecs.get(Initiative, entity).value
 
-        distance = hex_distance((attacker_pos.q, attacker_pos.r), (target_pos.q, target_pos.r))
+        distance = hex_distance(
+            (attacker_pos.q, attacker_pos.r), (target_pos.q, target_pos.r)
+        )
+
+        print("distance:", distance)
 
         if distance <= atk.range:
             ecs.add_component(entity, QueuedAttack(target))
-        elif distance <= initiative:
-            path = bfs_with_fallback((attacker_pos.q, attacker_pos.r), (target_pos.q, target_pos.r), is_passable)[:(initiative-1)]
-            if len(path) - 1 <= initiative:
+        elif distance <= initiative + 1:
+            path = bfs_with_fallback(
+                (attacker_pos.q, attacker_pos.r),
+                (target_pos.q, target_pos.r),
+                is_passable,
+            )[:initiative]
+            if len(path) <= initiative:
                 print("QueuedAttack push")
                 ecs.add_component(entity, Path(path[1:]))
                 ecs.add_component(entity, QueuedAttack(target))

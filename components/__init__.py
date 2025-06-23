@@ -15,6 +15,7 @@ from .attack import Attack
 from .game_over import GameOver
 from .endgame_ui import EndgameUI
 from .available_cell import AvailableCell
+from .ai_managable import AiManagable
 
 __all__ = [
     "HexPosition",
@@ -32,4 +33,5 @@ __all__ = [
     "GameOver",
     "EndgameUI",
     "AvailableCell",
+    "AiManagable",
 ]

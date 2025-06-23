@@ -1,4 +1,14 @@
 from collections import deque
+from components import HexPosition
+from components import BlockingMove
+
+
+def is_passable(q, r, ecs):
+    for entity in ecs.get_entities_with(HexPosition, BlockingMove):
+        pos = ecs.get(HexPosition, entity)
+        if pos.q == q and pos.r == r:
+            return False
+    return True
 
 
 def hex_distance(a, b):
