@@ -23,6 +23,7 @@ from components import (
     EndgameUI,
     AvailableCell,
     AiManagable,
+    UnitState,
 )
 
 from commands import AttackCommand
@@ -90,7 +91,7 @@ def render_entity(screen, entity, ecs):
     anim = ecs.get(Animation, entity)
     if anim:
         pos = ecs.get(HexPosition, entity)
-        frame = anim.frames[anim.current_frame]
+        frame = anim.get_current_frame()
         x, y = hex_to_pixel(pos.q, pos.r, TILE_SIZE)
         screen_x = x + SCREEN_OFFSET_X
         screen_y = y + SCREEN_OFFSET_Y
@@ -121,16 +122,22 @@ def render_entity(screen, entity, ecs):
         )
 
 
-def load_animation_frames(folder_path):
-    return [
-        pygame.image.load(os.path.join(folder_path, filename)).convert_alpha()
-        for filename in sorted(os.listdir(folder_path))
-        if filename.endswith(".png")
-    ]
+def load_animation_dict(folder_path: str) -> dict[str, list[pygame.Surface]]:
+    animations: dict[str, list[pygame.Surface]] = {}
+    for filename in sorted(os.listdir(folder_path)):
+        if filename.endswith(".png"):
+            state = filename.split("_")[0]
+            if state not in animations:
+                animations[state] = []
+            image = pygame.image.load(
+                os.path.join(folder_path, filename)
+            ).convert_alpha()
+            animations[state].append(image)
+    return animations
 
 
 def setup_entities(ecs):
-    frames = load_animation_frames("assets/knight")
+    frames = load_animation_dict("assets/knight")
 
     knight = ecs.create_entity()
     ecs.add_component(knight, Animation(frames, frame_duration=0.15))
@@ -140,6 +147,7 @@ def setup_entities(ecs):
     ecs.add_component(knight, Health(100, 80))
     ecs.add_component(knight, Team("player"))
     ecs.add_component(knight, Attack(20))
+    ecs.add_component(knight, UnitState("idle"))
 
     knight1 = ecs.create_entity()
     ecs.add_component(knight1, Animation(frames, frame_duration=0.15))
@@ -149,6 +157,7 @@ def setup_entities(ecs):
     ecs.add_component(knight1, Health(100, 1))
     ecs.add_component(knight1, Team("computer"))
     ecs.add_component(knight1, AiManagable())
+    ecs.add_component(knight1, UnitState("idle"))
 
     for r in range(MAP_HEIGHT):
         r_offset = r >> 1
@@ -375,6 +384,7 @@ def game_loop():
             ):
                 ecs.components[Path].pop(active, None)
                 print("end turn")
+                ecs.get(Animation, active).set_state("idle")
                 turn_manager.end_turn()
 
         events = pygame.event.get()
