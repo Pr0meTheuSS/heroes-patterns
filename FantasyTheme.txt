@@ -1,0 +1,38 @@
+Button {
+    BackgroundColor = rgba(80, 50, 30, 255)  ; тёмно-коричневая основа
+    BackgroundColorHover = rgba(120, 70, 40, 255)
+    BackgroundColorDown = rgba(140, 90, 60, 255)
+    TextColor = rgba(255, 215, 160, 255)     ; светло-золотой текст
+    TextColorHover = rgba(255, 230, 180, 255)
+    BorderColor = rgba(200, 160, 90, 255)    ; светлая декоративная рамка
+    Borders = 3
+    Padding = 8
+    Font = "fonts/MagicMedieval.ttf"
+    TextSize = 24
+    RoundedBorderRadius = 8
+}
+
+Label {
+    TextColor = rgba(255, 220, 160, 255)
+    Font = "fonts/MagicMedieval.ttf"
+    TextSize = 22
+}
+
+Panel {
+    BackgroundColor = rgba(40, 25, 15, 240) ; полупрозрачный тёмный фон
+    Borders = 2
+    BorderColor = rgba(150, 100, 60, 255)
+}
+
+EditBox {
+    BackgroundColor = rgba(60, 40, 30, 255)
+    TextColor = rgba(255, 230, 200, 255)
+    SelectedTextColor = black
+    SelectedBackgroundColor = rgba(240, 200, 120, 180)
+    BorderColor = rgba(190, 150, 80, 255)
+    Borders = 2
+    Padding = 6
+    Font = "fonts/MagicMedieval.ttf"
+    TextSize = 20
+}
+
