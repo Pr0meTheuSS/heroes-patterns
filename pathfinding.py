@@ -2,8 +2,18 @@ from collections import deque
 from components import HexPosition
 from components import BlockingMove
 
+MAP_WIDTH = 11
+MAP_HEIGHT = 9
+
+
+def is_pos_in_map(q, r) -> bool:
+    print(q, r)
+    return q in range(0, MAP_WIDTH) and r in range(0, MAP_HEIGHT)
+
 
 def is_passable(q, r, ecs):
+    # if not is_pos_in_map(q, r):
+    #    return False
     for entity in ecs.get_entities_with(HexPosition, BlockingMove):
         pos = ecs.get(HexPosition, entity)
         if pos.q == q and pos.r == r:

@@ -40,12 +40,11 @@ from systems import (
 )
 
 from pathfinding import bfs_with_fallback
-from pathfinding import is_passable
+from pathfinding import is_passable, is_pos_in_map
+from pathfinding import MAP_WIDTH, MAP_HEIGHT
 
 # --- Константы ---
 TILE_SIZE = 30
-MAP_WIDTH = 11
-MAP_HEIGHT = 9
 SCREEN_WIDTH = 800
 SCREEN_HEIGHT = 600
 
@@ -264,6 +263,7 @@ def handle_events(events, ecs, turn_manager, ui_manager, q, r):
     for event in events:
         if ecs.get(Team, active).name != "player":
             break
+
         if event.type == pygame.QUIT:
             running = False
         ui_manager.process_events(event)
@@ -290,19 +290,19 @@ def handle_events(events, ecs, turn_manager, ui_manager, q, r):
                     and active
                     and team.name != ecs.get(Team, active).name
                 ):
-                    print(entity)
                     ecs.add_component(active, AttackCommand(target_id=entity))
 
             if active and ecs.get(Path, active) is None:
-                start = ecs.get(HexPosition, active)
-                initiative = ecs.get(Initiative, active)
-                path = bfs_with_fallback(
-                    (start.q, start.r),
-                    (q, r),
-                    lambda q_, r_: is_passable(q_, r_, ecs),
-                )[: initiative.value + 1]
-                if path:
-                    ecs.add_component(active, Path(path[1:]))
+                if is_pos_in_map(q, r):
+                    start = ecs.get(HexPosition, active)
+                    initiative = ecs.get(Initiative, active)
+                    path = bfs_with_fallback(
+                        (start.q, start.r),
+                        (q, r),
+                        lambda q_, r_: is_passable(q_, r_, ecs),
+                    )[: initiative.value + 1]
+                    if path:
+                        ecs.add_component(active, Path(path[1:]))
 
     return running
 
