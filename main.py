@@ -140,12 +140,12 @@ def setup_entities(ecs):
 
     knight = ecs.create_entity()
     ecs.add_component(knight, Animation(frames, frame_duration=0.15))
-    ecs.add_component(knight, HexPosition(0, 0))
+    ecs.add_component(knight, HexPosition(5, 5))
     ecs.add_component(knight, Initiative(3))
     ecs.add_component(knight, BlockingMove())
     ecs.add_component(knight, Health(100, 80))
     ecs.add_component(knight, Team("player"))
-    ecs.add_component(knight, Attack(20))
+    ecs.add_component(knight, Attack(15))
     ecs.add_component(knight, UnitState("idle"))
 
     knight1 = ecs.create_entity()
@@ -153,10 +153,20 @@ def setup_entities(ecs):
     ecs.add_component(knight1, HexPosition(8, 0))
     ecs.add_component(knight1, Initiative(3))
     ecs.add_component(knight1, BlockingMove())
-    ecs.add_component(knight1, Health(100, 1))
+    ecs.add_component(knight1, Health(100, 20))
     ecs.add_component(knight1, Team("computer"))
     ecs.add_component(knight1, AiManagable())
     ecs.add_component(knight1, UnitState("idle"))
+
+    knight2 = ecs.create_entity()
+    ecs.add_component(knight2, Animation(frames, frame_duration=0.15))
+    ecs.add_component(knight2, HexPosition(9, 0))
+    ecs.add_component(knight2, Initiative(3))
+    ecs.add_component(knight2, BlockingMove())
+    ecs.add_component(knight2, Health(100, 20))
+    ecs.add_component(knight2, Team("computer"))
+    ecs.add_component(knight2, AiManagable())
+    ecs.add_component(knight2, UnitState("idle"))
 
     for r in range(MAP_HEIGHT):
         r_offset = r >> 1
@@ -392,8 +402,8 @@ def game_loop():
 
         command_system.command_system(ecs, lambda q_, r_: is_passable(q_, r_, ecs))
         movement_system.movement_system(ecs, dt)
-        ai_managment(ecs, turn_manager)
         attack_system(ecs)
+        ai_managment(ecs, turn_manager)
 
         ui_manager.update(dt)
         ui_manager.draw_ui(screen)

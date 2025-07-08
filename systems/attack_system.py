@@ -1,5 +1,5 @@
 from commands import QueuedAttack
-from components import Attack, HexPosition, Path, Health
+from components import Attack, HexPosition, Path, Health, Animation
 from pathfinding import hex_distance
 
 
@@ -27,10 +27,15 @@ def attack_system(ecs):
         )
 
         if distance <= atk.range:
+            ecs.get(Animation, entity).set_state("attack")
             ecs.get(Health, target).value -= atk.power
             print(f"{entity} атакует {target} на {atk.power} урона")
             if ecs.get(Health, target).value <= 0:
-                ecs.delete_entity(target)
+                print(f"etity {target} is dead")
+                ecs.get(Animation, target).set_state("dead")
+            else:
+                ecs.get(Animation, target).set_state("hurt")
         else:
             print(f"{entity} слишком далеко от {target} — атака отменена")
-            ecs.remove_component(entity, QueuedAttack)
+
+        ecs.remove_component(entity, QueuedAttack)

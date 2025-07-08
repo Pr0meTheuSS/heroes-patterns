@@ -13,7 +13,11 @@ def ai_managment(ecs, turn_manager):
     for entity in ecs.get_entities_with(AiManagable):
         active = turn_manager.get_active_unit()
         path = ecs.get(Path, active)
-        if active and ecs.get(Team, active).name != "player":
+        if (
+            active
+            and ecs.get(Team, active).name != "player"
+            # and ecs.get(Animation, active).current_state != "dead"
+        ):
             if (
                 path
                 and path.current_index >= len(path.steps)

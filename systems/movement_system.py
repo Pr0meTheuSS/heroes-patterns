@@ -15,6 +15,6 @@ def movement_system(ecs, dt):
                 path.current_index += 1
                 path.step_timer = path.step_delay
         else:
-            print("change state to idle")
-            ecs.get(Animation, entity).set_state("idle")
+            # print("change state to idle")
+            # ecs.get(Animation, entity).set_state("idle")
             ecs.remove_component(entity, Path)
